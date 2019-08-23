@@ -263,11 +263,12 @@ class Race_pics:
             pickle.dump(pickle_data, pickle_file)
 
         # Finish batch and change button to allow new batch to be made
-        self.progress_bar.config(value=100)
+        self.info_window.config(state='normal')
         self.info_window.insert(1.0, 'Batch Complete!\n')
+        self.info_window.config(state='disabled')
         self.start_button.config(
             state='normal', text='NEW BATCH', command=self.select_working_directory)
-
+        self.progress_bar.config(value=100)
         return
 
 
