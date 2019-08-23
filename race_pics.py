@@ -4,7 +4,7 @@ race_pics v. 1.0
     The intention is to have it used as other pictures are being taken with a different card so photos can
     be ready for upload as the race is happening.
 
-Created for Enmotive by Brad Remy - August 2019
+Created for EnMotive by Brad Remy - August 2019
 """
 
 from natsort import natsorted
@@ -18,6 +18,7 @@ import arrow
 import io
 import os
 import pickle
+import piexif
 import pyexiv2
 import shutil
 
@@ -37,7 +38,7 @@ class Race_pics:
         self.root.geometry('640x500+640+300')
         self.root.configure(background='white')
         self.root.resizable(False, False)
-        self.root.title('Race_Pics - We\'re really cookin\' now!')
+        self.root.title('Race_Pics - We\'re really movin\' now!')
         self.root.call('wm', 'iconphoto', self.root._w,
                        PhotoImage(file='assets\\favicon.ico'))
         Label(self.root, text=arrow.now().format("dddd, MMMM DD, YYYY"),
@@ -60,7 +61,7 @@ class Race_pics:
         self.root.mainloop()
 
     def __repr__(self):
-        return f'We\'re really cookin\' now!'
+        return f'We\'re really movin\' now!'
 
     def select_working_directory(self):
         """
@@ -100,6 +101,7 @@ class Race_pics:
             previous_photog_name = pic_info[0]
             previous_race_name = pic_info[1]
             previous_race_location = pic_info[2]
+            previous_date = pic_info[3]
 
         # Create frame for entry labels
         main_frame = Frame(self.root, width=640, height=50, background='white')
@@ -131,13 +133,13 @@ class Race_pics:
         self.date_entry = Entry(main_frame, width=30, font=(
             'Tahoma', 15, 'bold'), borderwidth=2, relief='groove')
         self.date_entry.grid(row=4, column=1, pady=(5, 0), sticky='e')
-        self.date_entry.insert(1, arrow.now().format("MMMM DD, YYYY"))
+        self.date_entry.insert(1, previous_date)
         Label(main_frame, text='Resize Images To: ', background='white',
               font=('Tahoma', 15)).grid(row=5, column=0, sticky='w', pady=(5, 0))
         self.size_entry = Entry(main_frame, width=30, font=(
             'Tahoma', 15, 'bold'), borderwidth=2, relief='groove')
         self.size_entry.grid(row=5, column=1, pady=(5, 0), sticky='e')
-        self.size_entry.insert(1, '2000')
+        self.size_entry.insert(1, '3000')
         self.start_button = Button(main_frame, text='START', width=10, font=(
             'Tahoma', 14, 'bold'), command=self.start_batch)
         self.start_button.grid(row=7, column=1, sticky='e')
@@ -163,12 +165,6 @@ class Race_pics:
         self.info_window.insert(
             1.0, f'Found {len(self.image_list)} images in {self.working_directory}\n----------------------------------------------------------------------------')
         self.info_window.config(state='disabled')
-
-        # Pickle variables to show up next time a batch is ran
-        pickle_data = [self.name_entry.get(), self.race_entry.get(),
-                       self.location_entry.get()]
-        with open('assets\\image_vars.pickle', 'wb') as pickle_file:
-            pickle.dump(pickle_data, pickle_file)
 
         return
 
@@ -205,8 +201,8 @@ class Race_pics:
         progress_bar_increment = 100 / len(self.image_list)
 
         # Set up EXIF data for all images
-        exif_dict = {
-            'Exif.Image.ImageDescription': f'{self.race_entry.get()} // {self.date_entry.get()}',
+        custom_exif_dict = {
+            'Exif.Image.ImageDescription': f'{self.race_entry.get()} // {self.location_entry.get()}',
             'Exif.Image.Artist': self.name_entry.get(),
             'Exif.Image.Copyright': 'EnMotive',
             'Exif.Image.DateTime': self.date_entry.get(),
@@ -227,18 +223,24 @@ class Race_pics:
             # Move image to save directory and update variable
             shutil.copy2(img_to_process, self.save_directory)
             img_to_process = f'{self.save_directory}//{self.image_list[img_idx]}'
-
-            # Update image EXIF
-            img_meta = pyexiv2.Image(img_to_process)
-            img_meta.modify_exif(exif_dict)
-
-            # Resize and rename image
-            new_img_name = f'{self.save_directory}//{photog_prefix}_{race_prefix}_{self.image_list[img_idx]}'
             img = Image.open(img_to_process)
+
+            # Backup original EXIF
+            exif_dict = piexif.load(img.info['exif'])
+            exif_bytes = piexif.dump(exif_dict)
+
+            # Resize if necessary and rename image
+            new_img_name = f'{self.save_directory}//{photog_prefix}_{race_prefix}_{self.image_list[img_idx][-8:]}'
             img_size_original = max(img.size[0], img.size[1])
             if img_size_original >= picture_size:
                 img.thumbnail((picture_size, picture_size), Image.ANTIALIAS)
-                img.save(new_img_name, 'JPEG')
+            img.save(img_to_process, 'JPEG', exif=exif_bytes, quality=90)
+            img.close()
+            os.rename(img_to_process, new_img_name)
+
+            # Add custom EXIF
+            img_meta = pyexiv2.Image(new_img_name)
+            img_meta.modify_exif(custom_exif_dict)
 
             # Update progress bar and label
             self.info_window.config(state='normal')
@@ -254,7 +256,14 @@ class Race_pics:
             img_idx += 1
             self.root.update()
 
+        # Pickle variables to show up next time a batch is ran
+        pickle_data = [self.name_entry.get(), self.race_entry.get(),
+                       self.location_entry.get(), self.date_entry.get()]
+        with open('assets\\image_vars.pickle', 'wb') as pickle_file:
+            pickle.dump(pickle_data, pickle_file)
+
         # Finish batch and change button to allow new batch to be made
+        self.progress_bar.config(value=100)
         self.info_window.insert(1.0, 'Batch Complete!\n')
         self.start_button.config(
             state='normal', text='NEW BATCH', command=self.select_working_directory)
