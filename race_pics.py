@@ -211,14 +211,16 @@ class Race_pics:
 
         # Check for existing files witih current info so the file name is continued
         save_location_and_details = f'{photog_prefix}_{race_prefix}_'
+        has_prev_pics = False
         cur_folder_files = glob.glob(f'{self.save_directory}/*')
         # Also check for any files left over from an unfinished batch and delete it to avoid naming issues
         for folder_file in cur_folder_files:
             if 'MG_' in folder_file:
                 os.remove(folder_file)
                 cur_folder_files.remove(folder_file)
-        # Change current_file_name variable to match existing files if they exist
-        if len(cur_folder_files) > 0:
+            if save_location_and_details in folder_file:
+                has_prev_pics = True
+        if has_prev_pics:
             current_file_name = int(cur_folder_files[-1][-9:-4]) + 1
 
         # Set up EXIF data for all images
