@@ -15,6 +15,7 @@ from tkinter.filedialog import askdirectory
 from ttkthemes import ThemedTk
 import tkinter.scrolledtext as tkst
 import arrow
+import glob
 import io
 import os
 import pickle
@@ -193,12 +194,32 @@ class Race_pics:
             self.create_gui
             return
 
+        # Set up shortened variables and make sure size is only numbers
+        photog_prefix = ''.join(
+            c for c in self.name_entry.get() if c.isupper())
+        race_prefix = self.race_entry.get().replace(' ', '_').replace('\'', '')
+        picture_size = int(
+            ''.join(i for i in self.size_entry.get() if i.isdigit()))
+
         # Set up initial variables for index and progress bar
         self.start_button.config(state='disabled', text='RUNNING...')
         self.save_directory_button.config(state='disabled')
         img_idx = 0
         progress = 0
+        current_file_name = 1
         progress_bar_increment = 100 / len(self.image_list)
+
+        # Check for existing files witih current info so the file name is continued
+        save_location_and_details = f'{photog_prefix}_{race_prefix}_'
+        cur_folder_files = glob.glob(f'{self.save_directory}/*')
+        # Also check for any files left over from an unfinished batch and delete it to avoid naming issues
+        for folder_file in cur_folder_files:
+            if 'MG_' in folder_file:
+                os.remove(folder_file)
+                cur_folder_files.remove(folder_file)
+        # Change current_file_name variable to match existing files if they exist
+        if len(cur_folder_files) > 0:
+            current_file_name = int(cur_folder_files[-1][-9:-4]) + 1
 
         # Set up EXIF data for all images
         custom_exif_dict = {
@@ -208,13 +229,6 @@ class Race_pics:
             'Exif.Image.DateTime': self.date_entry.get(),
             'Exif.Image.Software': 'Race_Pics v.1.0'
         }
-
-        # Set up shortened variables and make sure size is only numbers
-        photog_prefix = ''.join(
-            c for c in self.name_entry.get() if c.isupper())
-        race_prefix = self.race_entry.get().replace(' ', '_').replace('\'', '')
-        picture_size = int(
-            ''.join(i for i in self.size_entry.get() if i.isdigit()))
 
         # Loop through images by index of image_list
         while img_idx < len(self.image_list):
@@ -230,7 +244,7 @@ class Race_pics:
             exif_bytes = piexif.dump(exif_dict)
 
             # Resize if necessary and rename image
-            new_img_name = f'{self.save_directory}//{photog_prefix}_{race_prefix}_{self.image_list[img_idx][-8:]}'
+            new_img_name = f'{self.save_directory}//{save_location_and_details}{str(current_file_name).zfill(5)}.jpg'
             img_size_original = max(img.size[0], img.size[1])
             if img_size_original >= picture_size:
                 img.thumbnail((picture_size, picture_size), Image.ANTIALIAS)
@@ -254,6 +268,7 @@ class Race_pics:
 
             # Move to next photo
             img_idx += 1
+            current_file_name += 1
             self.root.update()
 
         # Pickle variables to show up next time a batch is ran
