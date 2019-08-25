@@ -29,11 +29,6 @@ class Race_pics:
         """
         Initialize and set up variables and windows for future placement
         """
-        # A few variables to be used throughout the class
-        self.working_directory = ''
-        self.save_directory = ''
-        self.image_list = []
-
         # Create main window
         self.root = ThemedTk(theme='radiance')
         self.root.geometry('640x500+640+300')
@@ -42,10 +37,6 @@ class Race_pics:
         self.root.title('Race_Pics - We\'re really movin\' now!')
         self.root.call('wm', 'iconphoto', self.root._w,
                        PhotoImage(file='assets\\favicon.ico'))
-        Label(self.root, text=arrow.now().format("dddd, MMMM DD, YYYY"),
-              background='white', font=('Tahoma, 8')).grid(row=3, column=0, sticky='W')
-        Label(self.root, text='Race_Pics v. 1.0',
-              background='white', font=('Tahoma', 8)).grid(row=3, column=1, sticky='E')
 
         # Create initial logo and directory selection visuals
         self.main_logo = PhotoImage(file='assets\\enmotive_logo.png')
@@ -69,6 +60,11 @@ class Race_pics:
         This selects the image directory and creates a list of the images to be iterated through.
         After creating the list it continues the program and clears out the start up logos
         """
+        # A few variables to be get us going
+        self.working_directory = ''
+        self.save_directory = ''
+        self.image_list = []
+
         # Pop up to select directory and setting up proper slashes
         self.working_directory = askdirectory()
         self.working_directory = str(self.working_directory)
@@ -160,12 +156,20 @@ class Race_pics:
 
         # Create text window
         self.info_window = tkst.ScrolledText(
-            self.root, width=47, height=5, font=('Tahoma', 17), wrap='word', borderwidth=2)
+            self.root, width=47, height=6, font=('Tahoma', 17), wrap='word', borderwidth=2)
         self.info_window.grid(row=1, column=0, columnspan=2,
-                              sticky='s', pady=(15, 0))
+                              sticky='s', pady=(10, 0))
         self.info_window.insert(
             1.0, f'Found {len(self.image_list)} images in {self.working_directory}\n----------------------------------------------------------------------------')
         self.info_window.config(state='disabled')
+
+        # Create small labels and reset button on bottom of window
+        Button(self.root, text='RESET', font=('Tahoma', 7),
+               command=self.select_working_directory).grid(row=3, column=1)
+        Label(self.root, text=arrow.now().format("dddd, MMMM DD, YYYY"),
+              background='white', font=('Tahoma, 8')).grid(row=3, column=0, sticky='W')
+        Label(self.root, text='Race_Pics v. 1.0',
+              background='white', font=('Tahoma', 8)).grid(row=3, column=1, sticky='E')
 
         return
 
@@ -228,7 +232,6 @@ class Race_pics:
             'Exif.Image.ImageDescription': f'{self.race_entry.get()} // {self.location_entry.get()}',
             'Exif.Image.Artist': self.name_entry.get(),
             'Exif.Image.Copyright': 'EnMotive',
-            'Exif.Image.DateTime': self.date_entry.get(),
             'Exif.Image.Software': 'Race_Pics v.1.0'
         }
 
