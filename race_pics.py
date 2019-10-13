@@ -20,7 +20,7 @@ import io
 import os
 import pickle
 import piexif
-# import pyexiv2
+import pyexiv2
 import shutil
 
 
@@ -258,8 +258,8 @@ class Race_pics:
             os.rename(img_to_process, new_img_name)
 
             # # Add custom EXIF
-            # img_meta = pyexiv2.Image(new_img_name)
-            # img_meta.modify_exif(custom_exif_dict)
+            img_meta = pyexiv2.Image(new_img_name)
+            img_meta.modify_exif(custom_exif_dict)
 
             # Update progress bar and label
             self.info_window.config(state='normal')
